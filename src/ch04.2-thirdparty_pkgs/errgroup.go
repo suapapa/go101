@@ -36,8 +36,8 @@ func (b *Bug) Sing() error {
 			return b.ctx.Err()
 		case <-sing.C:
 			log.Infof("%s says %s", b.name, b.sound)
-		case t := <-dead.C:
-			log.Infof("%s died at %v", b.name, t)
+		case <-dead.C:
+			// log.Infof("%s died at %v", b.name, t)
 			// return nil // 자기의 삶 동안 계속 노래
 			return fmt.Errorf("%s died", b.name) // 누구라도 노래가 끝나면 합창 중단
 		}
@@ -48,6 +48,7 @@ func (b *Bug) Sing() error {
 
 func errgroupDemo() {
 	eg, ctx := errgroup.WithContext(context.Background())
+	ctx, cancelF := context.WithCancel(ctx)
 
 	criket := NewBug(ctx, "귀뚜라미", "귀뚤", 10*time.Second, 1*time.Second)
 	mosquito := NewBug(ctx, "모기", "에엥", 7*time.Second, 5*time.Second)
@@ -58,7 +59,13 @@ func errgroupDemo() {
 	eg.Go(bee.Sing)
 	eg.Go(mosquito.Sing)
 
-	// 누구라도 노래가 끝나면 그 즉시 중단
+	// 2초 후에 합창 중단
+	go func() {
+		time.Sleep(2 * time.Second)
+		log.Warn("그만!")
+		cancelF()
+	}()
+
 	if err := eg.Wait(); err != nil {
 		log.Error(err)
 	}
